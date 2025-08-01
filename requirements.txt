@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+requests
+shapely
+pyproj
+matplotlib
+beautifulsoup4
+geopandas
+lxml
+netCDF4
