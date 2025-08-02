@@ -47,23 +47,17 @@ def extract_polygons(placemark_elem):
 
 def description_table_to_json(html_text):
     soup = BeautifulSoup(html_text, "html.parser")
-    
-    # Find all tables and select the second one (first is just the image header)
-    tables = soup.find_all("table")
-    if len(tables) < 2:
-        return {}
+    data = {}
 
-    data_table = tables[0].find("table")  # Nested table with the data
-    result = {}
-
-    for row in data_table.find_all("tr"):
+    rows = soup.find_all("tr")
+    for row in rows:
         cells = row.find_all("td")
         if len(cells) == 2:
             key = cells[0].get_text(strip=True)
             value = cells[1].get_text(strip=True)
-            result[key] = value
+            data[key] = value
 
-    return json.dumps(result, ensure_ascii=False, separators=(',', ':'))
+    return data
 
 def find_placemark_from_kmz(lat, lon, kmz_path):
     point = Point(lon, lat)
@@ -96,13 +90,25 @@ def run(latitude, longitude):
     result = find_placemark_from_kmz(latitude, longitude, FILE_1996_2005)
     
     if result:
-        output['96_05'] = {'name':result["name"], 'data': json.loads(result["description_json"])}
+        output['96_05'] = {'name':result["name"], 'data': json.dumps(result["description_json"], indent=2, ensure_ascii=False)}
+        print()
+        print("1996 to 2005:")
+        print("✅ Point is inside placemark:")
+        print("📍 Name:", result["name"])
+        print("📦 Description as JSON:")
+        print(json.dumps(result["description_json"], indent=2, ensure_ascii=False))
     else:
         print("❌ No matching placemark found.")
 
     result = find_placemark_from_kmz(latitude, longitude, FILE_2006_2015)
     if result:
-        output['06_15'] = {'name':result["name"], 'data': json.loads(result["description_json"])}
+        output['06_15'] = {'name':result["name"], 'data': json.dumps(result["description_json"], indent=2, ensure_ascii=False)}
+        print()
+        print("2006 to 2015:")
+        print("✅ Point is inside placemark:")
+        print("📍 Name:", result["name"])
+        print("📦 Description as JSON:")
+        print(json.dumps(result["description_json"], indent=2, ensure_ascii=False))
         return output
     else:
         print("❌ No matching placemark found.")
