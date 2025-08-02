@@ -8,3 +8,4 @@ beautifulsoup4
 geopandas
 lxml
 netCDF4
+pillow

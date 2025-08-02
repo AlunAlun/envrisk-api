@@ -90,29 +90,18 @@ def run(latitude, longitude):
     result = find_placemark_from_kmz(latitude, longitude, FILE_1996_2005)
     
     if result:
-        output['96_05'] = {'name':result["name"], 'data': json.dumps(result["description_json"], indent=2, ensure_ascii=False)}
-        print()
-        print("1996 to 2005:")
-        print("✅ Point is inside placemark:")
-        print("📍 Name:", result["name"])
-        print("📦 Description as JSON:")
-        print(json.dumps(result["description_json"], indent=2, ensure_ascii=False))
+        output['96_05'] = {'name':result["name"], 'data': result["description_json"]}
     else:
+        output['96_05'] = "No fire risk"
         print("❌ No matching placemark found.")
 
     result = find_placemark_from_kmz(latitude, longitude, FILE_2006_2015)
     if result:
-        output['06_15'] = {'name':result["name"], 'data': json.dumps(result["description_json"], indent=2, ensure_ascii=False)}
-        print()
-        print("2006 to 2015:")
-        print("✅ Point is inside placemark:")
-        print("📍 Name:", result["name"])
-        print("📦 Description as JSON:")
-        print(json.dumps(result["description_json"], indent=2, ensure_ascii=False))
-        return output
+        output['06_15'] = {'name':result["name"], 'data': result["description_json"]}
     else:
+        output['06_15'] = "No fire risk"
         print("❌ No matching placemark found.")
-        return("No match")
+    return output
 
 # output = run(43.18021446088912, -6.542169479579782)
 # print(output)

@@ -1,8 +1,16 @@
+from PIL import Image
 import geopandas as gpd
 from shapely.geometry import Point
 from pyproj import CRS
+import matplotlib
+matplotlib.use("Agg")  # ✅ non-interactive backend
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import os
+import base64
+from io import BytesIO
+from pyproj import Transformer
+from shapely.ops import transform
 
 # === 1. Load shapefile ===
 shapefile_path = "pand-p-shp/pand_p.shp"  # Adjust if running locally
@@ -49,56 +57,60 @@ def get_desertification_risk(lat, lon, GDF):
     risk_code = int(match.iloc[0]["DESER_CLA"])
     return RISK_LABELS.get(risk_code, f"Unknown code: {risk_code}")
 
-def plot_full_dataset_with_point(GDF, lat, lon, filename=None):
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
-    from shapely.geometry import Point
+def filter_polygons_near_point_desert(gdf, lat, lon, max_km=100):
+    """
+    Filter GeoDataFrame to only include polygons whose centroid is within max_km of a given point.
+    Returns a filtered GeoDataFrame.
+    """
+    point_wgs = Point(lon, lat)
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:25830", always_xy=True)
+    point_proj = transform(transformer.transform, point_wgs)
 
+    nearby_indices = []
+    for idx, row in gdf.iterrows():
+        geom = row.geometry
+        if geom.is_valid:
+            centroid_proj = transform(transformer.transform, geom.centroid)
+            if point_proj.distance(centroid_proj) <= max_km * 1000:
+                nearby_indices.append(idx)
+
+    return gdf.loc[nearby_indices]
+
+
+def plot_full_dataset_with_point(GDF, lat, lon):
+    GDF = filter_polygons_near_point_desert(GDF, lat, lon, max_km=100)
     point = Point(lon, lat)
 
-    fig, ax = plt.subplots(figsize=(14, 12))
+    fig, ax = plt.subplots(figsize=(6, 5))
 
-    # Plot polygons by desertification class
-    legend_patches = []
-    for code, label in RISK_LABELS.items():
+    for code in RISK_LABELS.keys():
         subset = GDF[GDF["DESER_CLA"] == code]
         color = RISK_COLORS.get(code, "black")
-        subset.plot(ax=ax, color=color, alpha=0.7, edgecolor="k", linewidth=0.2)
-        patch = mpatches.Patch(color=color, label=f"{label} ({code})")
-        legend_patches.append(patch)
+        subset.plot(ax=ax, color=color, alpha=0.5, edgecolor="k", linewidth=0.2)
 
-    # Plot the query point as a thick black X
-    ax.scatter(
-        lon, lat,
-        color="black",
-        marker="x",
-        s=200,         # size
-        linewidths=2,  # thickness of the X
-        label="Queried Point (X)"
-    )
+    # Plot black X for queried location
+    ax.scatter(lon, lat, color="black", marker="x", s=100, linewidths=2)
 
-    # Add point to legend
-    legend_patches.append(mpatches.Patch(color="black", label="Queried Point (X)"))
+    # Remove all non-essentials
+    ax.axis("off")
 
-    # Style legend outside plot
-    ax.set_title("Desertification Risk Map (PAND) with Query Location", fontsize=14)
-    ax.axis('off')
-    ax.legend(
-        handles=legend_patches,
-        title="Risk Categories",
-        loc="center left",
-        bbox_to_anchor=(1.0, 0.5)
-    )
+    plt.tight_layout(pad=0)  # Minimize surrounding space
 
-    plt.tight_layout()
-    # Save if filename provided
-    if filename:
-        plt.savefig(filename, dpi=300, bbox_inches="tight")
-        print(f"Plot saved to {filename}")
+    # Save to PNG buffer
+    buf_png = BytesIO()
+    plt.savefig(buf_png, format="png", dpi=100, bbox_inches="tight", pad_inches=0)
+    plt.close()
+    buf_png.seek(0)
 
-    # plt.show()
+    # Convert to optimized JPEG
+    image = Image.open(buf_png).convert("RGB")
+    buf_jpg = BytesIO()
+    image.save(buf_jpg, format="JPEG", quality=80, optimize=True)
+    buf_jpg.seek(0)
 
-
+    # Encode to base64
+    base64_img = base64.b64encode(buf_jpg.read()).decode("utf-8")
+    return f"data:image/jpeg;base64,{base64_img}"
 
 # === 5. Example usage ===
 def run(latitude, longitude):
@@ -119,18 +131,16 @@ def run(latitude, longitude):
     # longitude = -11.430494039736288
 
     risk = get_desertification_risk(latitude, longitude, gdf)
-    fName = f"desertification_at_{latitude}_{longitude}.png"
+    image_base64 = ""
     if risk != "No Data":
-        print(f"Desertification risk at ({latitude}, {longitude}): {risk}")
-        # plot_full_dataset_with_point(gdf, latitude, longitude, fName)
+        print()
+        image_base64 = plot_full_dataset_with_point(gdf, latitude, longitude)
     else:
         print("trying canarias...")
         risk = get_desertification_risk(latitude, longitude, gdf2)
-        print(f"Desertification risk at ({latitude}, {longitude}): {risk}")
         # if risk != "No Data":
-            # plot_full_dataset_with_point(gdf2, latitude, longitude, fName)
-    output = {'risk': risk, 'filename': fName}
-    return output
+        #     image_base64 = plot_full_dataset_with_point(gdf2, latitude, longitude)
+    return {"risk": risk, 'img': image_base64}
 
 # output = run(37.216683162769684, -7.316882654272187)
 # print(output)
