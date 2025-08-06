@@ -16,7 +16,10 @@ app = FastAPI(title="Environmental Risk API")
 # ✅ Allow cross-origin from localhost:3000 (React dev)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://clownfish-app-hrwwx.ondigitalocean.app/"],  # or ["*"] to allow all origins (not recommended for production)
+    allow_origins=[
+        "http://localhost:3000",
+        "https://clownfish-app-hrwwx.ondigitalocean.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
