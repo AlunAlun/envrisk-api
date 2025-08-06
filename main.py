@@ -42,6 +42,21 @@ def get_risks(lat: float = Query(...), lon: float = Query(...)):
         "desertification": ensure_dict(desert.run(lat, lon)),
     }
 
+@app.get("/risk/fire")
+def get_fire(lat: float, lon: float):
+    return {"fire": ensure_dict(fire_kml4.run(lat, lon))}
+
+@app.get("/risk/flood")
+def get_flood(lat: float, lon: float):
+    return {
+        "fluvial_flood": ensure_dict(fluvial_flood_risks.run(lat, lon)),
+        "coastal_flood": ensure_dict(coastal_flood_risks.run(lat, lon)),
+    }
+
+@app.get("/risk/desert")
+def get_desert(lat: float, lon: float):
+    return {"desertification": ensure_dict(desert.run(lat, lon))}
+
 ## python -m venv venv
 # source venv/bin/activate  # or `venv\Scripts\activate` on Windows
 ## pip install -r requirements.txt
