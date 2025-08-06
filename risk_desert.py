@@ -13,10 +13,10 @@ from pyproj import Transformer
 from shapely.ops import transform
 
 # === 1. Load shapefile ===
-shapefile_path = "pand-p-shp/pand_p.shp"  # Adjust if running locally
+shapefile_path = "data/pand_p.shp"  # Adjust if running locally
 gdf = gpd.read_file(shapefile_path)
 
-shapefile_path2 = "pand-p-shp/pand_c.shp"  # Adjust if running locally
+shapefile_path2 = "data/pand_c.shp"  # Adjust if running locally
 gdf2 = gpd.read_file(shapefile_path2)
 
 # === 2. Reproject to EPSG:4326 if needed ===

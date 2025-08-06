@@ -203,8 +203,8 @@ def generate_fire_map(poly_and_values, lat, lon):
 
 def run(latitude, longitude):
     output = {}
-    FILE_2006_2015 = "frecuenciadeincendiosperiodo2006a2015_tcm30-525840.kmz"
-    FILE_1996_2005 = "frecuenciadeincendiosperiodo1996a2005_tcm30-199965.kmz"
+    FILE_2006_2015 = "data/frecuenciadeincendiosperiodo2006a2015_tcm30-525840.kmz"
+    FILE_1996_2005 = "data/frecuenciadeincendiosperiodo1996a2005_tcm30-199965.kmz"
 
     result_9605, polys_9605 = find_placemark_from_kmz(latitude, longitude, FILE_1996_2005)
     result_0615, polys_0615 = find_placemark_from_kmz(latitude, longitude, FILE_2006_2015)
