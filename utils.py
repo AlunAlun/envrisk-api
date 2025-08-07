@@ -22,9 +22,6 @@ def filter_polygons_near_point(polygons_with_values, lat, lon, max_km=100):
             geometries.append(poly)
             values.append(val)
 
-    # print(f"✅ Total input polygons: {len(polygons_with_values)}")
-    # print(f"✅ Valid polygons: {len(geometries)}")
-
     # Step 2: Build GeoDataFrame in EPSG:4326
     gdf = gpd.GeoDataFrame({'geometry': geometries, 'value': values}, geometry='geometry', crs='EPSG:4326')
 
@@ -35,18 +32,15 @@ def filter_polygons_near_point(polygons_with_values, lat, lon, max_km=100):
     transformer_to_25830 = Transformer.from_crs("EPSG:4326", "EPSG:25830", always_xy=True)
     x, y = transformer_to_25830.transform(lon, lat)
     point_proj = Point(x, y)
-    # print(f"🔍 Projected point: ({x:.2f}, {y:.2f})")
 
     buffer_m = max_km * 1000
     bbox = box(x - buffer_m, y - buffer_m, x + buffer_m, y + buffer_m)
-    # print(f"📦 Query bbox: {bbox.bounds}")
 
     # Step 5: Spatial index query
     sindex = gdf_proj.sindex
     candidate_idx = list(sindex.intersection(bbox.bounds))
     candidates_proj = gdf_proj.iloc[candidate_idx]
     candidates_orig = gdf.iloc[candidate_idx]
-    # print(f"🔍 Candidates from STRtree: {len(candidates_proj)}")
 
     # Step 6: Filter by centroid distance, return original geometries
     nearby = []
@@ -59,8 +53,7 @@ def filter_polygons_near_point(polygons_with_values, lat, lon, max_km=100):
                 nearby.append((orig_geom, val))
         except Exception as e:
             print(f"⚠️ Skipping geometry: {e}")
-
-    # print(f"✅ Found {len(nearby)} nearby polygons")
+            
     return nearby
 
 def filter_polygons_near_pointo(polygons_with_values, lat, lon, max_km=100):

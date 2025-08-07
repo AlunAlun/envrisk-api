@@ -66,6 +66,7 @@ def run(lat, lon):
             "cota_media": props.get("Cota media (m)"),
             "area_km2": props.get("Área (km2)")
         }
+        print("Coastal 100 risks successfully returned.")
     else:
         print("Error with coastal 100 data")
         output["100"] = "Data not available or service error."
@@ -77,10 +78,11 @@ def run(lat, lon):
             "cota_media": props.get("Cota media (m)"),
             "area_km2": props.get("Área (km2)")
         }
+        print("Coastal 500 risks successfully returned.")
     else:
         print("Error with coastal 500 data")
         output["500"] = "Data not available or service error."
-    print("Coastal risks successfully returned.")
+   
     return output
 
 # output = run(41.27374622035448, 2.0522067636329004)
