@@ -21,22 +21,13 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Environmental Risk API")
 
-# # ✅ Allow cross-origin from localhost:3000 (React dev)
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=[
-#         "http://localhost:3000",
-#         "https://clownfish-app-hrwwx.ondigitalocean.app"
-#     ],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow any origin
-    allow_credentials=False,  # Must be False when using "*"
+    allow_origins=[
+        "http://localhost:3000",
+        "https://clownfish-app-hrwwx.ondigitalocean.app",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
