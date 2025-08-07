@@ -67,6 +67,7 @@ def run(lat, lon):
             "area_km2": props.get("Área (km2)")
         }
     else:
+        print("Error with coastal 100 data")
         output["100"] = "Data not available or service error."
 
     if data500 and data500.get("features"):
@@ -77,8 +78,9 @@ def run(lat, lon):
             "area_km2": props.get("Área (km2)")
         }
     else:
+        print("Error with coastal 500 data")
         output["500"] = "Data not available or service error."
-
+    print("Coastal risks successfully returned.")
     return output
 
 # output = run(41.27374622035448, 2.0522067636329004)

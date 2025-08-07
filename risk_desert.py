@@ -43,6 +43,7 @@ def run(latitude, longitude):
         risk = get_desertification_risk(latitude, longitude, gdf2)
         # Optional: generate second image for Canarias if needed
         image_base64 = plot_full_dataset_with_point(gdf2, latitude, longitude, RISK_LABELS, RISK_COLORS)
+    print("Desert risks successfully returned.")
     return {"risk": risk, "img": image_base64}
 
 

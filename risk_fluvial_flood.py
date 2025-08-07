@@ -50,10 +50,10 @@ def run(lat, lon):
                 val = float(text.split("GRAY_INDEX =")[1].split('\n')[0].strip())
                 if val > -1e+38:
                     results.append(val)
-                    print(f"Reading: {val}")
+                    # print(f"Reading: {val}")
                 else:
                     results.append(0)
-                    print(f"Reading: 0")
+                    # print(f"Reading: 0")
         except Exception as e:
             wasError = True
             print(f"Error at offset {n}:", e)
@@ -61,14 +61,15 @@ def run(lat, lon):
     # Step 7: Print results
     if wasError == False:
         risks = {'10': results[0], '100': results[1], '500': results[2]}
-        print()
-        print("Risks")
-        print("-----")
-        print(f"10 year {risks['10']}")
-        print(f"100 year {risks['100']}")
-        print(f"500 year {risks['500']}")
-        print()
+        # print()
+        # print("Risks")
+        # print("-----")
+        # print(f"10 year {risks['10']}")
+        # print(f"100 year {risks['100']}")
+        # print(f"500 year {risks['500']}")
+        # print()
         output = risks
+        print("Fluvial risks successfully returned")
         return output
     else:
         print("There was an error fetching the data")

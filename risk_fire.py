@@ -12,6 +12,7 @@ def run(lat, lon):
     t1 = time.perf_counter()
     match_9605 = next((f for f in data_load_fire.geojson_9605["features"] if shape(f["geometry"]).contains(point)), None)
     match_0615 = next((f for f in data_load_fire.geojson_0615["features"] if shape(f["geometry"]).contains(point)), None)
+    
     t2 = time.perf_counter()
     print(f"⏱️ Point match time: {t2 - t1:.3f} seconds")
 

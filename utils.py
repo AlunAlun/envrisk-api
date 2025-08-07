@@ -12,8 +12,8 @@ from matplotlib.colors import Normalize
 import base64
 import geopandas as gpd
 
-def filter_polygons_near_pointn(polygons_with_values, lat, lon, max_km=100):
-    # Step 1: Build GeoDataFrame from input list
+def filter_polygons_near_point(polygons_with_values, lat, lon, max_km=100):
+    # Step 1: Separate valid geometries and values
     geometries = []
     values = []
 
@@ -22,41 +22,48 @@ def filter_polygons_near_pointn(polygons_with_values, lat, lon, max_km=100):
             geometries.append(poly)
             values.append(val)
 
+    # print(f"✅ Total input polygons: {len(polygons_with_values)}")
+    # print(f"✅ Valid polygons: {len(geometries)}")
+
+    # Step 2: Build GeoDataFrame in EPSG:4326
     gdf = gpd.GeoDataFrame({'geometry': geometries, 'value': values}, geometry='geometry', crs='EPSG:4326')
 
-    # Step 2: Project to EPSG:25830 for distance calculation
-    transformer = Transformer.from_crs("EPSG:4326", "EPSG:25830", always_xy=True)
+    # Step 3: Project to EPSG:25830 for filtering
     gdf_proj = gdf.to_crs("EPSG:25830")
 
-    # Step 3: Create projected point and buffer box
-    x, y = transformer.transform(lon, lat)
+    # Step 4: Project point to EPSG:25830
+    transformer_to_25830 = Transformer.from_crs("EPSG:4326", "EPSG:25830", always_xy=True)
+    x, y = transformer_to_25830.transform(lon, lat)
     point_proj = Point(x, y)
+    # print(f"🔍 Projected point: ({x:.2f}, {y:.2f})")
+
     buffer_m = max_km * 1000
     bbox = box(x - buffer_m, y - buffer_m, x + buffer_m, y + buffer_m)
+    # print(f"📦 Query bbox: {bbox.bounds}")
 
-    # Step 4: Spatial index query
+    # Step 5: Spatial index query
     sindex = gdf_proj.sindex
     candidate_idx = list(sindex.intersection(bbox.bounds))
-    candidates = gdf_proj.iloc[candidate_idx]
+    candidates_proj = gdf_proj.iloc[candidate_idx]
+    candidates_orig = gdf.iloc[candidate_idx]
+    # print(f"🔍 Candidates from STRtree: {len(candidates_proj)}")
 
-    # Step 5: Final filter based on centroid distance
+    # Step 6: Filter by centroid distance, return original geometries
     nearby = []
-    for _, row in candidates.iterrows():
+    for i, row_proj in candidates_proj.iterrows():
         try:
-            centroid = row.geometry.centroid
+            centroid = row_proj.geometry.centroid
             if point_proj.distance(centroid) <= buffer_m:
-                val = float(row.value) if row.value not in [None, ""] else 0.0
-                nearby.append((row.geometry, val))
+                orig_geom = candidates_orig.loc[i].geometry
+                val = float(candidates_orig.loc[i].value) if candidates_orig.loc[i].value not in [None, ""] else 0.0
+                nearby.append((orig_geom, val))
         except Exception as e:
             print(f"⚠️ Skipping geometry: {e}")
 
-    print(f"✅ Found {len(nearby)} nearby polygons")
+    # print(f"✅ Found {len(nearby)} nearby polygons")
     return nearby
 
-
-
-
-def filter_polygons_near_point(polygons_with_values, lat, lon, max_km=100):
+def filter_polygons_near_pointo(polygons_with_values, lat, lon, max_km=100):
     point_wgs = Point(lon, lat)
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:25830", always_xy=True)
     point_proj = transform(transformer.transform, point_wgs)
@@ -75,7 +82,57 @@ def filter_polygons_near_point(polygons_with_values, lat, lon, max_km=100):
             nearby.append((poly, numeric_value))
     return nearby
 
+
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from PIL import Image
+from io import BytesIO
+from matplotlib import pyplot as plt
+from matplotlib.colors import Normalize
+from matplotlib import cm
+from shapely.geometry import Polygon
+import base64
+
 def generate_fire_map(poly_and_values, lat, lon):
+    fire_counts = [v for _, v in poly_and_values if v is not None]
+    if not fire_counts:
+        return ""
+
+    norm = Normalize(vmin=min(fire_counts), vmax=max(fire_counts))
+    cmap = cm.get_cmap("Reds")
+
+    fig = plt.figure(figsize=(6, 5), dpi=80)
+    canvas = FigureCanvas(fig)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_axis_off()
+
+    for poly, value in poly_and_values:
+        if isinstance(poly, Polygon):
+            color = cmap(norm(value)) if value is not None else "#cccccc"
+            ax.fill(*poly.exterior.xy, color=color, edgecolor="k", linewidth=0.2, alpha=0.7)
+
+    ax.plot(lon, lat, marker="x", color="black", markersize=8, markeredgewidth=2)
+
+    canvas.draw()
+    width, height = canvas.get_width_height()
+
+    # ✅ Get the raw RGBA bytes and convert to Image
+    image = Image.frombuffer("RGBA", (width, height), canvas.buffer_rgba(), "raw", "RGBA", 0, 1)
+    image = image.convert("RGB")  # Strip alpha to reduce file size
+
+    # Save to JPEG
+    buf = BytesIO()
+    image.save(buf, format="JPEG", quality=50, optimize=True)
+    buf.seek(0)
+
+    return f"data:image/jpeg;base64,{base64.b64encode(buf.read()).decode('utf-8')}"
+
+
+
+
+
+
+
+def generate_fire_mapo(poly_and_values, lat, lon):
     point = Point(lon, lat)
     fig, ax = plt.subplots(figsize=(6, 5))
 
