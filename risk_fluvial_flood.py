@@ -3,6 +3,7 @@ from pyproj import Transformer
 
 
 def run(lat, lon):
+    # return("MITECO service is offline or unavailable.")
     # Step 2: Convert to EPSG:3857 (Web Mercator)
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
     x, y = transformer.transform(lon, lat)
@@ -71,7 +72,7 @@ def run(lat, lon):
         return output
     else:
         print("There was an error fetching the data")
-        return("Error")
+        return("MITECO service is offline or unavailable.")
 
 # output = run(41.283645999461406, 2.064729668547003)
 # print(output)

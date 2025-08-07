@@ -9,3 +9,4 @@ geopandas
 lxml
 netCDF4
 pillow
+rtree

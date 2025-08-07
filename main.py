@@ -10,6 +10,8 @@ import risk_fluvial_flood
 import risk_coastal_flood
 import risk_fire
 import risk_desert
+import data_load_fire
+import data_load_desert
 
 app = FastAPI(title="Environmental Risk API")
 
@@ -34,6 +36,21 @@ class RiskResult(BaseModel):
 
 def ensure_dict(data):
     return data if isinstance(data, dict) else {"error": str(data)}
+
+# === Load data on startup ===
+@app.on_event("startup")
+def load_datasets():
+    # Fire datasets
+    _ = data_load_fire.geojson_9605
+    _ = data_load_fire.geojson_0615
+    _ = data_load_fire.polys_9605
+    _ = data_load_fire.polys_0615
+    print("✅ Fire datasets loaded into memory.")
+
+    # Desertification datasets
+    _ = data_load_desert.gdf
+    _ = data_load_desert.gdf2
+    print("✅ Desertification datasets loaded into memory.")
 
 # === Combined Risk Endpoint ===
 @app.get("/risk", response_model=RiskResult)

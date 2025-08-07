@@ -12,11 +12,12 @@
 import requests
 from pyproj import Transformer
 
+
 def run(lat, lon):
+    # return {'100': "MITECO service is offline or unavailable.", '500': "MITECO service is offline or unavailable."}
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
     x, y = transformer.transform(lon, lat)
 
-    # Define a small buffer around the point (in meters)
     buffer = 76 / 2
     minx = x - buffer
     maxx = x + buffer
@@ -41,15 +42,24 @@ def run(lat, lon):
             "&INFO_FORMAT=application/json"
         )
 
+    def fetch_data(url):
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching data from {url}:\n  {e}")
+            return None
+
     url100 = build_featureinfo_url("zim_laminas_q100", minx, miny, maxx, maxy)
     url500 = build_featureinfo_url("zim_laminas_q500", minx, miny, maxx, maxy)
 
-    data100 = requests.get(url100).json()
-    data500 = requests.get(url500).json()
+    data100 = fetch_data(url100)
+    data500 = fetch_data(url500)
 
     output = {}
 
-    if data100.get("features"):
+    if data100 and data100.get("features"):
         props = data100["features"][0]["properties"]
         output["100"] = {
             "cota_max": props.get("Cota máxima (m)"),
@@ -57,9 +67,9 @@ def run(lat, lon):
             "area_km2": props.get("Área (km2)")
         }
     else:
-        output["100"] = None
+        output["100"] = "Data not available or service error."
 
-    if data500.get("features"):
+    if data500 and data500.get("features"):
         props = data500["features"][0]["properties"]
         output["500"] = {
             "cota_max": props.get("Cota máxima (m)"),
@@ -67,7 +77,7 @@ def run(lat, lon):
             "area_km2": props.get("Área (km2)")
         }
     else:
-        output["500"] = None
+        output["500"] = "Data not available or service error."
 
     return output
 
