@@ -1,4 +1,4 @@
-from shapely.geometry import Polygon, Point, box
+from shapely.geometry import Polygon, MultiPolygon, Point, box
 from shapely.strtree import STRtree
 from shapely.ops import transform
 from pyproj import Transformer
@@ -10,6 +10,51 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.colors import Normalize
 import base64
+import geopandas as gpd
+
+def filter_polygons_near_pointn(polygons_with_values, lat, lon, max_km=100):
+    # Step 1: Build GeoDataFrame from input list
+    geometries = []
+    values = []
+
+    for poly, val in polygons_with_values:
+        if isinstance(poly, (Polygon, MultiPolygon)) and poly.is_valid:
+            geometries.append(poly)
+            values.append(val)
+
+    gdf = gpd.GeoDataFrame({'geometry': geometries, 'value': values}, geometry='geometry', crs='EPSG:4326')
+
+    # Step 2: Project to EPSG:25830 for distance calculation
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:25830", always_xy=True)
+    gdf_proj = gdf.to_crs("EPSG:25830")
+
+    # Step 3: Create projected point and buffer box
+    x, y = transformer.transform(lon, lat)
+    point_proj = Point(x, y)
+    buffer_m = max_km * 1000
+    bbox = box(x - buffer_m, y - buffer_m, x + buffer_m, y + buffer_m)
+
+    # Step 4: Spatial index query
+    sindex = gdf_proj.sindex
+    candidate_idx = list(sindex.intersection(bbox.bounds))
+    candidates = gdf_proj.iloc[candidate_idx]
+
+    # Step 5: Final filter based on centroid distance
+    nearby = []
+    for _, row in candidates.iterrows():
+        try:
+            centroid = row.geometry.centroid
+            if point_proj.distance(centroid) <= buffer_m:
+                val = float(row.value) if row.value not in [None, ""] else 0.0
+                nearby.append((row.geometry, val))
+        except Exception as e:
+            print(f"⚠️ Skipping geometry: {e}")
+
+    print(f"✅ Found {len(nearby)} nearby polygons")
+    return nearby
+
+
+
 
 def filter_polygons_near_point(polygons_with_values, lat, lon, max_km=100):
     point_wgs = Point(lon, lat)
@@ -18,7 +63,6 @@ def filter_polygons_near_point(polygons_with_values, lat, lon, max_km=100):
 
     nearby = []
     for poly, value in polygons_with_values:
-        print(value)
         if not poly.is_valid:
             continue
         try:
