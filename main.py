@@ -12,6 +12,7 @@ import risk_fluvial_flood
 import risk_coastal_flood
 import risk_fire
 import risk_desert
+import risk_seismic
 import data_load_fire
 import data_load_desert
 
@@ -46,6 +47,7 @@ class RiskResult(BaseModel):
     coastal_flood: Dict
     fire: Dict
     desertification: Dict
+    seismic: Dict
 
 def ensure_dict(data):
     return data if isinstance(data, dict) else {"error": str(data)}
@@ -95,6 +97,10 @@ def get_risks(lat: float = Query(...), lon: float = Query(...)):
     desert = ensure_dict(risk_desert.run(lat, lon))
     logging.info(f"Desertification risk took {time.time() - start:.2f}s")
 
+    start = time.time()
+    seismic = ensure_dict(risk_seismic.run(lat, lon))
+    logging.info(f"Seismic risk took {time.time() - start:.2f}s")
+
     total_time = time.time() - start_total
     logging.info(f"Total /risk endpoint processing time: {total_time:.2f}s")
 
@@ -103,6 +109,7 @@ def get_risks(lat: float = Query(...), lon: float = Query(...)):
         "coastal_flood": coastal,
         "fire": fire,
         "desertification": desert,
+        "seismic": seismic,
     }
 
 @app.get("/risk/fire")
@@ -119,6 +126,12 @@ def get_flood(lat: float, lon: float):
 @app.get("/risk/desert")
 def get_desert(lat: float, lon: float):
     return {"desertification": ensure_dict(risk_desert.run(lat, lon))}
+
+@app.get("/risk/seismic")
+def get_seismic_risk(lat: float = Query(...), lon: float = Query(...)) -> Dict:
+    return {
+        "seismic": ensure_dict(risk_seismic.run(lat, lon)),
+    }
 
 ## python -m venv venv
 # source venv/bin/activate  # or `venv\Scripts\activate` on Windows
