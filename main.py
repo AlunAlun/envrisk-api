@@ -2,6 +2,8 @@ from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware 
 from fastapi.responses import JSONResponse
+from auth import verify_token
+from fastapi import Depends
 from typing import Dict
 import requests
 from xml.etree import ElementTree as ET
@@ -68,8 +70,15 @@ def load_datasets():
 #         "desertification": ensure_dict(risk_desert.run(lat, lon)),
 #     }
 
-@app.get("/risk", response_model=RiskResult)
-def get_risks(lat: float = Query(...), lon: float = Query(...)):
+
+
+@app.get("/risk", response_model=RiskResult, dependencies=[Depends(verify_token)])
+def get_risks(
+    lat: float = Query(...), 
+    lon: float = Query(...),
+    token_data: dict = Depends(verify_token)
+    ):
+    print(f"Authenticated request by: {token_data['sub']}") # or 'email', or 'name'
     start_total = time.time()
 
     start = time.time()
@@ -103,22 +112,22 @@ def get_risks(lat: float = Query(...), lon: float = Query(...)):
         "seismic": seismic,
     }
 
-@app.get("/risk/fire")
+@app.get("/risk/fire", dependencies=[Depends(verify_token)])
 def get_fire(lat: float, lon: float):
     return {"fire": ensure_dict(risk_fire.run(lat, lon))}
 
-@app.get("/risk/flood")
+@app.get("/risk/flood", dependencies=[Depends(verify_token)])
 def get_flood(lat: float, lon: float):
     return {
         "fluvial_flood": ensure_dict(risk_fluvial_flood.run(lat, lon)),
         "coastal_flood": ensure_dict(risk_coastal_flood.run(lat, lon)),
     }
 
-@app.get("/risk/desert")
+@app.get("/risk/desert", dependencies=[Depends(verify_token)])
 def get_desert(lat: float, lon: float):
     return {"desertification": ensure_dict(risk_desert.run(lat, lon))}
 
-@app.get("/risk/seismic")
+@app.get("/risk/seismic", dependencies=[Depends(verify_token)])
 def get_seismic_risk(lat: float = Query(...), lon: float = Query(...)) -> Dict:
     return {
         "seismic": ensure_dict(risk_seismic.run(lat, lon)),
