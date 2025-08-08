@@ -1,5 +1,6 @@
 import requests
 from pyproj import Transformer
+from utils import get_transformer
 
 LAYERS = {
     "HazardArea2015.PGA475_p": {
@@ -41,7 +42,7 @@ LAYERS = {
 }
 
 def run(lat, lon):
-    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    transformer = get_transformer("EPSG:4326", "EPSG:3857")
     x, y = transformer.transform(lon, lat)
 
     buffer = 76 / 2

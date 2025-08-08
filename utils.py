@@ -11,6 +11,11 @@ from matplotlib import cm
 from matplotlib.colors import Normalize
 import base64
 import geopandas as gpd
+from functools import lru_cache
+
+@lru_cache(maxsize=2)
+def get_transformer(from_crs, to_crs):
+    return Transformer.from_crs(from_crs, to_crs, always_xy=True)
 
 def filter_polygons_near_point(polygons_with_values, lat, lon, max_km=100):
     # Step 1: Separate valid geometries and values
@@ -56,26 +61,6 @@ def filter_polygons_near_point(polygons_with_values, lat, lon, max_km=100):
             
     return nearby
 
-def filter_polygons_near_pointo(polygons_with_values, lat, lon, max_km=100):
-    point_wgs = Point(lon, lat)
-    transformer = Transformer.from_crs("EPSG:4326", "EPSG:25830", always_xy=True)
-    point_proj = transform(transformer.transform, point_wgs)
-
-    nearby = []
-    for poly, value in polygons_with_values:
-        if not poly.is_valid:
-            continue
-        try:
-            numeric_value = float(value)
-        except (ValueError, TypeError):
-            numeric_value = 0.0
-
-        centroid_proj = transform(transformer.transform, poly.centroid)
-        if point_proj.distance(centroid_proj) <= max_km * 1000:
-            nearby.append((poly, numeric_value))
-    return nearby
-
-
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from PIL import Image
 from io import BytesIO
@@ -117,47 +102,12 @@ def generate_fire_map(poly_and_values, lat, lon):
     image.save(buf, format="JPEG", quality=50, optimize=True)
     buf.seek(0)
 
-    return f"data:image/jpeg;base64,{base64.b64encode(buf.read()).decode('utf-8')}"
+    return_data = f"data:image/jpeg;base64,{base64.b64encode(buf.read()).decode('utf-8')}"
+    
+    plt.close(fig)  # ✅ Close the figure to prevent memory leak
+    buf.close()
+    return return_data
 
-
-
-
-
-
-
-def generate_fire_mapo(poly_and_values, lat, lon):
-    point = Point(lon, lat)
-    fig, ax = plt.subplots(figsize=(6, 5))
-
-    fire_counts = [v for _, v in poly_and_values if v is not None]
-    if not fire_counts:
-        return ""
-
-    norm = Normalize(vmin=min(fire_counts), vmax=max(fire_counts))
-    cmap = cm.Reds
-
-    for poly, value in poly_and_values:
-        if isinstance(poly, Polygon):
-            x, y = poly.exterior.xy
-            color = cmap(norm(value)) if value is not None else "#cccccc"
-            ax.fill(x, y, color=color, edgecolor="k", linewidth=0.2, alpha=0.7)
-
-    ax.scatter(lon, lat, color="black", marker="x", s=100, linewidths=2)
-    ax.axis("off")
-    plt.tight_layout(pad=0)
-
-    buf_png = BytesIO()
-    plt.savefig(buf_png, format="png", dpi=100, bbox_inches="tight", pad_inches=0)
-    plt.close()
-    buf_png.seek(0)
-
-    image = Image.open(buf_png).convert("RGB")
-    buf_jpg = BytesIO()
-    image.save(buf_jpg, format="JPEG", quality=80, optimize=True)
-    buf_jpg.seek(0)
-
-    base64_img = base64.b64encode(buf_jpg.read()).decode("utf-8")
-    return f"data:image/jpeg;base64,{base64_img}"
 
 def filter_polygons_near_point_desert(gdf, lat, lon, max_km=100):
     """
@@ -165,7 +115,7 @@ def filter_polygons_near_point_desert(gdf, lat, lon, max_km=100):
     """
     # Transform point to projected coords (for distance in meters)
     point_wgs = Point(lon, lat)
-    transformer = Transformer.from_crs("EPSG:4326", "EPSG:25830", always_xy=True)
+    transformer = get_transformer("EPSG:4326", "EPSG:25830")
     x, y = transformer.transform(lon, lat)
 
     buffer_m = max_km * 1000
@@ -220,12 +170,15 @@ def plot_full_dataset_with_point(GDF, lat, lon, risk_labels, risk_colors):
     plt.close()
     buf_png.seek(0)
 
-    # Convert to optimized JPEG
-    image = Image.open(buf_png).convert("RGB")
-    buf_jpg = BytesIO()
-    image.save(buf_jpg, format="JPEG", quality=80, optimize=True)
-    buf_jpg.seek(0)
+    with Image.open(buf_png) as image:
+        image = image.convert("RGB")
+        buf_jpg = BytesIO()
+        image.save(buf_jpg, format="JPEG", quality=80, optimize=True)
+        buf_jpg.seek(0)
+        base64_img = base64.b64encode(buf_jpg.read()).decode("utf-8")
 
-    # Encode to base64
-    base64_img = base64.b64encode(buf_jpg.read()).decode("utf-8")
+    buf_png.close()
+    buf_jpg.close()
+
     return f"data:image/jpeg;base64,{base64_img}"
+

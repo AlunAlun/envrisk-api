@@ -11,11 +11,12 @@
 # lon = 2.0522067636329004
 import requests
 from pyproj import Transformer
+from utils import get_transformer
 
 
 def run(lat, lon):
     # return {'100': "MITECO service is offline or unavailable.", '500': "MITECO service is offline or unavailable."}
-    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    transformer = get_transformer("EPSG:4326", "EPSG:3857")
     x, y = transformer.transform(lon, lat)
 
     buffer = 76 / 2
